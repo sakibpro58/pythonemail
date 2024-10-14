@@ -1,25 +1,22 @@
-# Use Ubuntu base image
-FROM ubuntu:latest
+# Use Alpine Linux as the base image
+FROM alpine:latest
 
-# Update the package list and install Python 3 and pip
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip build-essential
+# Install Python3, pip3, and necessary dependencies
+RUN apk add --no-cache python3 py3-pip py3-dnspython py3-pysocks py3-validators py3-flask py3-flask-restx \
+    && pip3 install --upgrade pip
 
-# Set Python3 as the default python
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
-
-# Copy the entire app to the /app directory
+# Copy the app files to the /app directory
 COPY . /app
 
-# Set the working directory
+# Set /app as the working directory
 WORKDIR /app
 
-# Install Python dependencies using Python3's pip
-RUN pip3 install --upgrade pip
+# Install any additional Python dependencies from requirements.txt, if needed
 RUN pip3 install -r requirements.txt
 
-# Expose the app port (optional, change this if using a different port)
-EXPOSE 3000
+# Expose the port Flask will be running on (optional, adjust based on your app's config)
+EXPOSE 5000
 
-# Default entrypoint for running the server
-ENTRYPOINT ["python3", "server.py"]
+# Start the Flask server
+ENTRYPOINT ["python3"]
+CMD ["server.py"]
