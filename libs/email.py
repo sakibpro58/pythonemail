@@ -9,9 +9,9 @@ def checkemail(email, mx):
         server.mail('me@domain.com')
         code, message = server.rcpt(str(email))
         server.quit()
-        return code, message, 0
+        return code, message.decode('utf-8'), 0  # Decode the message to a string
     except Exception as e:
-        print('[!] Error connecting to SMTP server: {0}'.format(str(e)))  # Updated
+        print('[!] Error connecting to SMTP server: {0}'.format(str(e)))
         return 666, str(e)
 
 def findcatchall(email, mx):
