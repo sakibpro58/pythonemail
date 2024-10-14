@@ -1,6 +1,5 @@
 import smtplib
 
-
 def checkemail(email, mx):
     try:
         server = smtplib.SMTP()
@@ -12,9 +11,8 @@ def checkemail(email, mx):
         server.quit()
         return code, message, 0
     except Exception as e:
-        print '[!] Error connecting to SMTP server: {0}'.format(str(e))
+        print('[!] Error connecting to SMTP server: {0}'.format(str(e)))  # Updated
         return 666, str(e)
-
 
 def findcatchall(email, mx):
     try:
@@ -26,5 +24,4 @@ def findcatchall(email, mx):
         else:
             return 0
     except Exception as e:
-        print '[!] Catch All Error: {0}'.format(str(e))
-
+        print('[!] Catch All Error: {0}'.format(str(e)))  # Updated
