@@ -10,5 +10,5 @@ def getrecords(email):
         mx = str(mx)
         return mx
     except Exception as e:
-        print '[!] DNS Resolution Issue: {0}'.format(str(e))
+        print('[!] DNS Resolution Issue: {0}'.format(str(e)))
         return 0
