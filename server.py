@@ -2,7 +2,7 @@
 
 from libs.mx import getrecords
 from libs.email import checkemail, findcatchall
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import validators
 
 def verifyemail(email):
@@ -13,19 +13,26 @@ def verifyemail(email):
             fake = 'Yes'
         else:
             fake = 'No'
+        
         results = checkemail(email, mx)
         if results[0] == 666:
-            return {'email': email, 'error': results[1], 'mx': mx, 'status': 'Error'}, 500
+            return jsonify({'email': email, 'error': results[1], 'mx': mx, 'status': 'Error'}), 500
         if results[0] == 250:
             status = 'Good'
         else:
             status = 'Bad'
 
-        data = {'email': email, 'mx': mx, 'code': results[0], 'message': results[1], 'status': status,
-                'catch_all': fake}
-        return data, 200
+        data = {
+            'email': email,
+            'mx': mx,
+            'code': results[0],
+            'message': results[1],
+            'status': status,
+            'catch_all': fake
+        }
+        return jsonify(data), 200
     else:
-        return {'error': 'Error checking email address'}, 500
+        return jsonify({'error': 'Error checking email address'}), 500
 
 app = Flask(__name__)
 
@@ -33,7 +40,7 @@ app = Flask(__name__)
 def search():
     addr = request.args.get('q')
     if not validators.email(addr):
-        return {'Error': 'Invalid email address'}, 400
+        return jsonify({'Error': 'Invalid email address'}), 400
     data = verifyemail(addr)
     return data
 
