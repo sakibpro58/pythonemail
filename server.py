@@ -2,47 +2,40 @@
 
 from libs.mx import getrecords
 from libs.email import checkemail, findcatchall
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import validators
 
-app = Flask(__name__)
-
-# Function to verify the email
 def verifyemail(email):
     mx = getrecords(email)
     if mx != 0:
         fake = findcatchall(email, mx)
-        fake = 'Yes' if fake > 0 else 'No'
+        if fake > 0:
+            fake = 'Yes'
+        else:
+            fake = 'No'
         results = checkemail(email, mx)
-        
         if results[0] == 666:
-            return {'email': email, 'error': results[1], 'mx': mx, 'status': 'Error'}
-        status = 'Good' if results[0] == 250 else 'Bad'
+            return {'email': email, 'error': results[1], 'mx': mx, 'status': 'Error'}, 500
+        if results[0] == 250:
+            status = 'Good'
+        else:
+            status = 'Bad'
 
-        data = {
-            'email': email,
-            'mx': mx,
-            'code': results[0],
-            'message': results[1],
-            'status': status,
-            'catch_all': fake
-        }
-        return data
+        data = {'email': email, 'mx': mx, 'code': results[0], 'message': results[1], 'status': status,
+                'catch_all': fake}
+        return data, 200
     else:
-        return {'error': 'Error checking email address'}
+        return {'error': 'Error checking email address'}, 500
 
-# API route to verify email
+app = Flask(__name__)
+
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
-    addr = request.args.get('email')
-    
-    # Validate the email format
+    addr = request.args.get('q')
     if not validators.email(addr):
-        return jsonify({'Error': 'Invalid email address'}), 400
-    
-    # Get verification result
+        return {'Error': 'Invalid email address'}, 400
     data = verifyemail(addr)
-    return jsonify(data)
+    return data
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080, debug=True)
