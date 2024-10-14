@@ -2,3 +2,4 @@ dnspython
 pysocks
 validators
 flask
+flask-restx
