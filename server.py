@@ -26,15 +26,16 @@ def verifyemail(email):
     if mx != 0:
         fake = findcatchall(email, mx)
         fake = 'Yes' if fake > 0 else 'No'
-        
-        # Verbose SMTP check with proxy
+
+        # Verbose SMTP SSL connection attempt
         try:
-            smtp = smtplib.SMTP(mx[0])  # Use the first MX record
+            # Connect to the first MX record over SSL
+            smtp = smtplib.SMTP_SSL(mx[0], 465)  # Adjust the port if necessary
             smtp.set_debuglevel(1)  # Enable verbose output for SMTP interactions
             smtp.quit()
         except Exception as e:
             print(f"SMTP connection error: {e}")
-            return jsonify({'error': 'SMTP connection error'}), 500
+            return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
 
         results = checkemail(email, mx)
         status = 'Good' if results[0] == 250 else 'Bad'
