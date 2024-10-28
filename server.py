@@ -20,18 +20,10 @@ def verifyemail(email):
     mx = getrecords(email)
     if mx != 0:
         fake = findcatchall(email, mx)
-        if fake > 0:
-            fake = 'Yes'
-        else:
-            fake = 'No'
+        fake = 'Yes' if fake > 0 else 'No'
         
         results = checkemail(email, mx)
-        if results[0] == 666:
-            return jsonify({'email': email, 'error': results[1], 'mx': mx, 'status': 'Error'}), 500
-        if results[0] == 250:
-            status = 'Good'
-        else:
-            status = 'Bad'
+        status = 'Good' if results[0] == 250 else 'Bad'
 
         data = {
             'email': email,
