@@ -4,6 +4,17 @@ from libs.mx import getrecords
 from libs.email import checkemail, findcatchall
 from flask import Flask, request, jsonify
 import validators
+import socks
+import smtplib
+
+# Proxy Configuration
+PROXY_HOST = "gw.dataimpulse.com"
+PROXY_PORT = 824
+USERNAME = "86ec273c5006e3b6367b"  # Replace with your actual username
+PASSWORD = "dc834684ea99c6a5"  # Replace with your actual password
+
+# Set up SOCKS5 proxy for outgoing connections
+socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
 
 def verifyemail(email):
     mx = getrecords(email)
