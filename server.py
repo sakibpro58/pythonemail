@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 import validators
 import socks
 import smtplib
+import socket
 
 # Proxy Configuration
 PROXY_HOST = "gw.dataimpulse.com"
@@ -15,6 +16,10 @@ PASSWORD = "dc834684ea99c6a5"  # Replace with your actual password
 
 # Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
+socket.socket = socks.socksocket  # Override default socket with SOCKS5
+
+# Flask app setup
+app = Flask(__name__)
 
 def verifyemail(email):
     mx = getrecords(email)
@@ -22,6 +27,15 @@ def verifyemail(email):
         fake = findcatchall(email, mx)
         fake = 'Yes' if fake > 0 else 'No'
         
+        # Verbose SMTP check with proxy
+        try:
+            smtp = smtplib.SMTP(mx[0])  # Use the first MX record
+            smtp.set_debuglevel(1)  # Enable verbose output for SMTP interactions
+            smtp.quit()
+        except Exception as e:
+            print(f"SMTP connection error: {e}")
+            return jsonify({'error': 'SMTP connection error'}), 500
+
         results = checkemail(email, mx)
         status = 'Good' if results[0] == 250 else 'Bad'
 
@@ -36,8 +50,6 @@ def verifyemail(email):
         return jsonify(data), 200
     else:
         return jsonify({'error': 'Error checking email address'}), 500
-
-app = Flask(__name__)
 
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
