@@ -3,7 +3,7 @@ import smtplib
 def checkemail(email, mx):
     try:
         server = smtplib.SMTP()
-        server.set_debuglevel(0)
+        server.set_debuglevel(1)  # Enable verbose SMTP logging
         server.connect(mx)
         server.helo('Alice')
         server.mail('me@domain.com')
@@ -24,4 +24,5 @@ def findcatchall(email, mx):
         else:
             return 0
     except Exception as e:
-        print('[!] Catch All Error: {0}'.format(str(e)))  # Updated
+        print('[!] Catch All Error: {0}'.format(str(e)))
+        return 0
