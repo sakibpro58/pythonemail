@@ -17,7 +17,7 @@ PASSWORD = "0pe6ey6amntt"  # Replace with your actual password
 # SSL Certificate Path
 SSL_CERT_PATH = "BrightData SSL certificate (port 33335).crt"
 
-# Configure SOCKS5 proxy and SSL context for outgoing connections
+# Set up SOCKS5 proxy and SSL context for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
 ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 
@@ -27,23 +27,23 @@ app = Flask(__name__)
 def verifyemail(email):
     mx = getrecords(email)
     
-    # Log the mx records for debugging
+    # Log the MX records for debugging
     print("MX Records:", mx)
 
-    # Check if mx records are valid
-    if mx != 0 and len(mx) > 0 and len(mx[0]) > 1:
+    # Check if MX records are valid
+    if mx != 0 and len(mx) > 0:
         fake = findcatchall(email, mx)
         fake = 'Yes' if fake > 0 else 'No'
         
         try:
             # Set up the SMTP connection
-            smtp = smtplib.SMTP(mx[0][1], 25)  # Assuming port 25, adjust if needed
-            smtp.set_debuglevel(1)  # Enable verbose logging for debugging
+            smtp = smtplib.SMTP(mx, 25)  # Use MX server and port 25 for SMTP
+            smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
             
-            # Send a test EHLO command
+            # Perform EHLO command to initiate session
             smtp.ehlo()
             
-            # Perform email verification here
+            # Run the email verification
             results = checkemail(email, mx)
             status = 'Good' if results[0] == 250 else 'Bad'
             
