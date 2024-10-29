@@ -26,13 +26,18 @@ app = Flask(__name__)
 
 def verifyemail(email):
     mx = getrecords(email)
-    if mx != 0:
+    
+    # Log the mx records for debugging
+    print("MX Records:", mx)
+
+    # Check if mx records are valid
+    if mx != 0 and len(mx) > 0 and len(mx[0]) > 1:
         fake = findcatchall(email, mx)
         fake = 'Yes' if fake > 0 else 'No'
         
         try:
             # Set up the SMTP connection
-            smtp = smtplib.SMTP(mx[0][1], 25)  # Example port, adjust if needed
+            smtp = smtplib.SMTP(mx[0][1], 25)  # Assuming port 25, adjust if needed
             smtp.set_debuglevel(1)  # Enable verbose logging for debugging
             
             # Send a test EHLO command
@@ -57,7 +62,8 @@ def verifyemail(email):
         except Exception as e:
             return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
     else:
-        return jsonify({'error': 'Error checking email address'}), 500
+        return jsonify({'error': 'Invalid MX records or no MX records found'}), 500
+
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
     addr = request.args.get('q')
