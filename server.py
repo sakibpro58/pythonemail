@@ -7,7 +7,6 @@ import validators
 import socks
 import smtplib
 import ssl
-import requests  # Added for checking proxy IP
 
 # Proxy Configuration
 PROXY_HOST = "brd.superproxy.io"
@@ -26,13 +25,6 @@ ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 app = Flask(__name__)
 
 def verifyemail(email):
-    # Test if the proxy is working by checking the IP
-    try:
-        response = requests.get("https://api.ipify.org?format=json")
-        print("Public IP (should be proxy IP):", response.json())
-    except Exception as e:
-        print("Error checking IP through proxy:", str(e))
-    
     mx = getrecords(email)
     
     # Log the MX records for debugging
