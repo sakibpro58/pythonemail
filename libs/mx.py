@@ -1,6 +1,5 @@
 from dns.resolver import Resolver
 
-
 def getrecords(email):
     try:
         domain = email.split('@')[1]
