@@ -5,3 +5,4 @@ flask
 flask-restx
 smtplib
 ssl
+requests
