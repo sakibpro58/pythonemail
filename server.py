@@ -25,23 +25,26 @@ ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 app = Flask(__name__)
 
 def verifyemail(email):
-    try:
-        # Establish SMTP connection with proxy support and SSL
-        smtp = smtplib.SMTP("smtp.example.com", 465)
-        smtp.set_debuglevel(1)  # Enable verbose logging for troubleshooting
-        smtp.sock = socks.socksocket()  # Wrap socket with SOCKS5 proxy
-        smtp.connect("smtp.example.com", 465)
-        smtp.starttls(context=ssl_context)  # Use SSL certificate
+    mx = getrecords(email)
+    if mx != 0:
+        fake = findcatchall(email, mx)
+        fake = 'Yes' if fake > 0 else 'No'
         
-        # Email verification process
-        mx = getrecords(email)
-        if mx != 0:
-            fake = findcatchall(email, mx)
-            fake = 'Yes' if fake > 0 else 'No'
+        try:
+            # Set up the SMTP connection
+            smtp = smtplib.SMTP(mx[0][1], 25)  # Example port, adjust if needed
+            smtp.set_debuglevel(1)  # Enable verbose logging for debugging
             
+            # Send a test EHLO command
+            smtp.ehlo()
+            
+            # Perform email verification here
             results = checkemail(email, mx)
             status = 'Good' if results[0] == 250 else 'Bad'
-
+            
+            # Close the SMTP connection
+            smtp.quit()
+            
             data = {
                 'email': email,
                 'mx': mx,
@@ -50,13 +53,11 @@ def verifyemail(email):
                 'status': status,
                 'catch_all': fake
             }
-            smtp.quit()  # Close SMTP connection
             return jsonify(data), 200
-        else:
-            return jsonify({'error': 'Error checking email address'}), 500
-    except Exception as e:
-        return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
-
+        except Exception as e:
+            return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
+    else:
+        return jsonify({'error': 'Error checking email address'}), 500
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
     addr = request.args.get('q')
