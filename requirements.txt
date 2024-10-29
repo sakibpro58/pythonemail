@@ -3,3 +3,5 @@ pysocks
 validators
 flask
 flask-restx
+smtplib
+ssl
