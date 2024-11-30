@@ -7,7 +7,7 @@ import validators
 import socks
 import smtplib
 import ssl
-import dns.resolver  # For external DNS resolution
+import dns.resolver
 import socket
 
 # Proxy Configuration
