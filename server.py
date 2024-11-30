@@ -7,7 +7,6 @@ import validators
 import socks
 import smtplib
 import ssl
-import dns.resolver
 
 # Proxy Configuration
 PROXY_HOST = "brd.superproxy.io"
@@ -25,28 +24,6 @@ ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 # Initialize Flask app
 app = Flask(__name__)
 
-def resolve_mx_via_google(mx_record):
-    """Force using Google DNS for MX resolution."""
-    resolver = dns.resolver.Resolver()
-    resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS
-
-    try:
-        print(f"Attempting to resolve MX record for: {mx_record}")
-        answers = resolver.resolve(mx_record, 'MX')
-        for rdata in answers:
-            print(f"Resolved {mx_record} to {rdata.exchange}")
-            return str(rdata.exchange)
-    except dns.resolver.NoAnswer as e:
-        print(f"No answer received for {mx_record}: {e}")
-    except dns.resolver.NXDOMAIN as e:
-        print(f"Domain does not exist for {mx_record}: {e}")
-    except dns.resolver.Timeout as e:
-        print(f"DNS query timed out for {mx_record}: {e}")
-    except Exception as e:
-        print(f"Failed to resolve {mx_record} with Google DNS: {e}")
-
-    return None
-
 def verifyemail(email):
     mx = getrecords(email)
     
@@ -57,15 +34,10 @@ def verifyemail(email):
     if mx != 0 and len(mx) > 0:
         fake = findcatchall(email, mx)
         fake = 'Yes' if fake > 0 else 'No'
-
-        # Try to resolve MX record using Google DNS
-        mx_server = resolve_mx_via_google(mx[0])
-        if not mx_server:
-            return jsonify({'error': 'Failed to resolve MX record via Google DNS'}), 500
         
         try:
-            # Set up the SMTP connection using the resolved MX server
-            smtp = smtplib.SMTP(mx_server, 25)  # Use resolved MX server and port 25 for SMTP
+            # Set up the SMTP connection
+            smtp = smtplib.SMTP(mx[0], 25)  # Use MX server and port 25 for SMTP
             smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
             
             # Perform EHLO command to initiate session
@@ -86,11 +58,11 @@ def verifyemail(email):
                 'status': status,
                 'catch_all': fake
             }
-            return jsonify(data), 200
+            return data, 200
         except Exception as e:
-            return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
+            return {'error': 'SMTP connection error', 'details': str(e)}, 500
     else:
-        return jsonify({'error': 'Invalid MX records or no MX records found'}), 500
+        return {'error': 'Invalid MX records or no MX records found'}, 500
 
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
@@ -99,9 +71,12 @@ def search():
         return jsonify({'Error': 'Invalid email address'}), 400
 
     response, status_code = verifyemail(addr)
-    if status_code == 500 and 'Failed to resolve MX record via Google DNS' in response.json().get('error', ''):
+    
+    # Check if the error message is related to DNS resolution
+    if status_code == 500 and 'Failed to resolve MX record via Google DNS' in response.get('error', ''):
         return jsonify({'error': 'Failed to resolve MX record. Please check the domain or MX records.'}), 500
-    return response
+    
+    return jsonify(response), status_code
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080, debug=True)
