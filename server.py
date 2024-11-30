@@ -7,7 +7,6 @@ import validators
 import socks
 import smtplib
 import ssl
-import socket
 import dns.resolver  # For external DNS resolution
 
 # Proxy Configuration
@@ -21,31 +20,24 @@ SSL_CERT_PATH = "BrightDataSSLcertificate.crt"
 
 # Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
+import socket
 socket.socket = socks.socksocket  # Override default socket with SOCKS5 proxy
 
 # Initialize Flask app
 app = Flask(__name__)
 
 def resolve_dns(mx_record):
-    """Resolve the IP address of an MX record using DNS."""
+    """Resolve the IP address of an MX record using an external DNS resolver."""
+    resolver = dns.resolver.Resolver()
+    resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS
     try:
-        # First try local DNS resolution
-        ip = socket.gethostbyname(mx_record)
-        print(f"Resolved {mx_record} to {ip}")
-        return ip
-    except Exception as local_dns_error:
-        print(f"Local DNS resolution failed for {mx_record}: {local_dns_error}")
-        # Fallback to external resolver (Google DNS)
-        try:
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS
-            answers = resolver.resolve(mx_record, "A")
-            for rdata in answers:
-                print(f"Resolved via external DNS: {mx_record} -> {rdata}")
-                return str(rdata)
-        except Exception as external_dns_error:
-            print(f"External DNS resolution failed for {mx_record}: {external_dns_error}")
-            return None
+        answers = resolver.resolve(mx_record, "A")
+        for rdata in answers:
+            print(f"Resolved {mx_record} to {rdata}")
+            return str(rdata)
+    except Exception as e:
+        print(f"DNS resolution failed for {mx_record}: {e}")
+        return None
 
 def verifyemail(email):
     mx_records = getrecords(email)
