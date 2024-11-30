@@ -3,8 +3,6 @@ import smtplib
 import ssl
 import socket
 import dns.resolver
-from flask import Flask, request, jsonify
-import validators
 import urllib.request
 
 # Bright Data Proxy credentials
@@ -30,20 +28,19 @@ try:
 except Exception as e:
     print(f"Error connecting via proxy: {str(e)}")
 
-# Initialize Flask app
-app = Flask(__name__)
-
-# Function to validate email syntax using validators library
-def is_valid_email_syntax(email):
-    return validators.email(email)
 
 # Function to check MX records via DNS resolution
 def check_mx_records(domain):
     try:
-        dns.resolver.resolve(domain, 'MX')
+        print(f"Resolving MX records for domain: {domain}")
+        mx_records = dns.resolver.resolve(domain, 'MX')
+        for mx in mx_records:
+            print(f"MX Record: {mx.exchange}")
         return True
-    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
+        print(f"MX resolution error: {str(e)}")
         return False
+
 
 # Function to check SMTP connection
 def check_smtp_connection(email):
@@ -52,10 +49,11 @@ def check_smtp_connection(email):
         # Resolve MX record
         mx_records = dns.resolver.resolve(domain, 'MX')
         mx_record = str(mx_records[0].exchange)
+        print(f"Connecting to SMTP server: {mx_record}")
 
         # Connect to the SMTP server
         server = smtplib.SMTP(mx_record, 25, timeout=10)
-        server.set_debuglevel(0)
+        server.set_debuglevel(1)  # Show debugging info
         server.helo()
         server.mail('test@example.com')
         code, message = server.rcpt(email)
@@ -69,12 +67,13 @@ def check_smtp_connection(email):
         print(f"SMTP connection error: {str(e)}")
         return False
 
+
 # Function to handle email verification
 def verify_email(email):
-    if not is_valid_email_syntax(email):
-        return {"status": "error", "message": "Invalid email syntax"}
-    
     domain = email.split('@')[1]
+
+    print(f"Starting verification for email: {email}")
+
     if not check_mx_records(domain):
         return {"status": "error", "message": "DNS resolution failed for MX record"}
     
@@ -83,15 +82,9 @@ def verify_email(email):
     
     return {"status": "success", "message": "Email is valid"}
 
-# API route to verify email via GET request
-@app.route('/api/v1/verify/', methods=['GET'])
-def verify():
-    email = request.args.get('q')
-    if not email:
-        return jsonify({"status": "error", "message": "Email query parameter missing"}), 400
-    
-    result = verify_email(email)
-    return jsonify(result)
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080, debug=True)
+# Example usage
+email_to_verify = 'test@pavoi.com'
+verification_result = verify_email(email_to_verify)
+
+print(f"Verification result for {email_to_verify}: {verification_result}")
