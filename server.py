@@ -7,7 +7,7 @@ import validators
 import socks
 import smtplib
 import ssl
-import dns.resolver  # Added to handle DNS resolution
+import dns.resolver
 
 # Proxy Configuration
 PROXY_HOST = "brd.superproxy.io"
@@ -19,17 +19,17 @@ PASSWORD = "ge8id0hnocik"  # Replace with your actual password
 SSL_CERT_PATH = "BrightDataSSLcertificate.crt"
 
 # Set up SOCKS5 proxy and SSL context for outgoing connections
-socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
-ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
+# socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
+# ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 
 # Initialize Flask app
 app = Flask(__name__)
 
 def resolve_mx_via_google(mx_record):
-    """Use Google DNS for MX resolution."""
+    """Force using Google DNS for MX resolution."""
     resolver = dns.resolver.Resolver()
-    resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS for public resolution
-    
+    resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS
+
     try:
         print(f"Attempting to resolve MX record for: {mx_record}")
         answers = resolver.resolve(mx_record, 'MX')
@@ -51,40 +51,37 @@ def verifyemail(email):
         fake = findcatchall(email, mx)
         fake = 'Yes' if fake > 0 else 'No'
 
-        # Resolve MX record using Google DNS (fallback method)
-        resolved_mx = resolve_mx_via_google(mx[0])
+        # Try resolving MX records via Google DNS if the regular method fails
+        mx_resolved = resolve_mx_via_google(mx[0]) if mx else None
+        if mx_resolved:
+            try:
+                # Set up the SMTP connection
+                smtp = smtplib.SMTP(mx_resolved, 25)  # Use MX server and port 25 for SMTP
+                smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
+                
+                # Perform EHLO command to initiate session
+                smtp.ehlo()
 
-        # If MX resolution fails, return an error
-        if not resolved_mx:
-            return jsonify({'error': 'DNS resolution failed for MX record'}), 500
+                # Run the email verification
+                results = checkemail(email, mx)
+                status = 'Good' if results[0] == 250 else 'Bad'
 
-        # If resolution is successful, proceed with SMTP connection
-        try:
-            # Set up the SMTP connection using the resolved MX
-            smtp = smtplib.SMTP(resolved_mx, 25)
-            smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
-            
-            # Perform EHLO command to initiate session
-            smtp.ehlo()
+                # Close the SMTP connection
+                smtp.quit()
 
-            # Run the email verification
-            results = checkemail(email, mx)
-            status = 'Good' if results[0] == 250 else 'Bad'
-
-            # Close the SMTP connection
-            smtp.quit()
-
-            data = {
-                'email': email,
-                'mx': mx,
-                'code': results[0],
-                'message': results[1],
-                'status': status,
-                'catch_all': fake
-            }
-            return jsonify(data), 200
-        except Exception as e:
-            return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
+                data = {
+                    'email': email,
+                    'mx': mx_resolved,
+                    'code': results[0],
+                    'message': results[1],
+                    'status': status,
+                    'catch_all': fake
+                }
+                return jsonify(data), 200
+            except Exception as e:
+                return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
+        else:
+            return jsonify({'error': 'Failed to resolve MX record via Google DNS'}), 500
     else:
         return jsonify({'error': 'Invalid MX records or no MX records found'}), 500
 
