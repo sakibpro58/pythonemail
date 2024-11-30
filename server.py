@@ -8,6 +8,7 @@ import socks
 import smtplib
 import ssl
 import dns.resolver  # For external DNS resolution
+import socket
 
 # Proxy Configuration
 PROXY_HOST = "brd.superproxy.io"
@@ -20,36 +21,38 @@ SSL_CERT_PATH = "BrightDataSSLcertificate.crt"
 
 # Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
-import socket
 socket.socket = socks.socksocket  # Override default socket with SOCKS5 proxy
 
 # Initialize Flask app
 app = Flask(__name__)
 
-def resolve_dns(mx_record):
-    """Resolve the IP address of an MX record using an external DNS resolver."""
+def resolve_dns_via_proxy(mx_record):
+    """Resolve the MX record through SOCKS proxy using an external DNS server."""
     resolver = dns.resolver.Resolver()
     resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS
+    socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
+    socket.socket = socks.socksocket  # Set the default socket to route via the proxy
+
     try:
-        answers = resolver.resolve(mx_record, "A")
+        answers = resolver.resolve(mx_record, 'MX')
         for rdata in answers:
-            print(f"Resolved {mx_record} to {rdata}")
-            return str(rdata)
+            print(f"Resolved {mx_record} to {rdata.exchange}")
+            return str(rdata.exchange)
     except Exception as e:
-        print(f"DNS resolution failed for {mx_record}: {e}")
+        print(f"DNS resolution failed for {mx_record} through proxy: {e}")
         return None
 
 def verifyemail(email):
     mx_records = getrecords(email)
     
     # Log MX records for debugging
-    print("MX Records:", mx_records)
+    print("Fetched MX Records:", mx_records)
 
     if not mx_records:
         return jsonify({'error': 'No MX records found'}), 500
 
     # Resolve the first MX record
-    mx_ip = resolve_dns(mx_records[0])
+    mx_ip = resolve_dns_via_proxy(mx_records[0])
     if not mx_ip:
         return jsonify({'error': 'DNS resolution failed for MX record'}), 500
 
