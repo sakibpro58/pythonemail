@@ -8,12 +8,13 @@ import socks
 import smtplib
 import ssl
 import socket
+import dns.resolver  # For external DNS resolution
 
 # Proxy Configuration
 PROXY_HOST = "brd.superproxy.io"
-PROXY_PORT = 33335  # Bright Data's required port
-USERNAME = "brd-customer-hl_19ba380f-zone-residential_proxy1"  # Replace with your actual username
-PASSWORD = "ge8id0hnocik"  # Replace with your actual password
+PROXY_PORT = 33335
+USERNAME = "brd-customer-hl_19ba380f-zone-residential_proxy1"
+PASSWORD = "ge8id0hnocik"
 
 # SSL Certificate Path
 SSL_CERT_PATH = "BrightDataSSLcertificate.crt"
@@ -26,41 +27,53 @@ socket.socket = socks.socksocket  # Override default socket with SOCKS5 proxy
 app = Flask(__name__)
 
 def resolve_dns(mx_record):
-    """Resolve the IP address of an MX record for debugging."""
+    """Resolve the IP address of an MX record using DNS."""
     try:
+        # First try local DNS resolution
         ip = socket.gethostbyname(mx_record)
         print(f"Resolved {mx_record} to {ip}")
         return ip
-    except Exception as e:
-        print(f"Failed to resolve {mx_record}: {e}")
-        return None
+    except Exception as local_dns_error:
+        print(f"Local DNS resolution failed for {mx_record}: {local_dns_error}")
+        # Fallback to external resolver (Google DNS)
+        try:
+            resolver = dns.resolver.Resolver()
+            resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS
+            answers = resolver.resolve(mx_record, "A")
+            for rdata in answers:
+                print(f"Resolved via external DNS: {mx_record} -> {rdata}")
+                return str(rdata)
+        except Exception as external_dns_error:
+            print(f"External DNS resolution failed for {mx_record}: {external_dns_error}")
+            return None
 
 def verifyemail(email):
     mx_records = getrecords(email)
     
-    # Log the MX records for debugging
+    # Log MX records for debugging
     print("MX Records:", mx_records)
 
     if not mx_records:
         return jsonify({'error': 'No MX records found'}), 500
-    
-    # Resolve DNS and use the first valid MX record
+
+    # Resolve the first MX record
     mx_ip = resolve_dns(mx_records[0])
     if not mx_ip:
         return jsonify({'error': 'DNS resolution failed for MX record'}), 500
 
+    # Check for catch-all domain
     fake = findcatchall(email, mx_records)
     fake = 'Yes' if fake > 0 else 'No'
 
     try:
-        # Attempt connection on port 25 (standard SMTP)
+        # Attempt SMTP connection
         smtp = smtplib.SMTP(mx_ip, 25)
-        smtp.set_debuglevel(1)  # Enable verbose logging
+        smtp.set_debuglevel(1)  # Enable SMTP debugging
         smtp.ehlo()
     except Exception as e:
-        print(f"Failed to connect on port 25: {e}")
+        print(f"SMTP connection failed on port 25: {e}")
         try:
-            # Retry with STARTTLS on port 587
+            # Retry using STARTTLS on port 587
             smtp = smtplib.SMTP(mx_ip, 587)
             smtp.set_debuglevel(1)
             smtp.ehlo()
@@ -69,16 +82,17 @@ def verifyemail(email):
             return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
 
     try:
-        # Run the email verification
+        # Run email verification
         results = checkemail(email, mx_records)
         status = 'Good' if results[0] == 250 else 'Bad'
-        
+
         # Close the SMTP connection
         smtp.quit()
-        
+
         data = {
             'email': email,
             'mx': mx_records,
+            'resolved_ip': mx_ip,
             'code': results[0],
             'message': results[1],
             'status': status,
