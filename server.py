@@ -15,7 +15,7 @@ USERNAME = "hl_ad020a32"  # Replace with your actual username
 PASSWORD = "0pe6ey6amntt"  # Replace with your actual password
 
 # SSL Certificate Path
-SSL_CERT_PATH = "BrightData SSL certificate (port 33335).crt"
+SSL_CERT_PATH = "BrightDataSSLcertificate.crt"
 
 # Set up SOCKS5 proxy and SSL context for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
