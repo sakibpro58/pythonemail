@@ -1,92 +1,76 @@
+#!/usr/bin/env python
+
+from libs.mx import getrecords
+from libs.email import checkemail, findcatchall
+from flask import Flask, request, jsonify
+import validators
 import socks
 import smtplib
 import ssl
-import socket
-import dns.resolver
-import urllib.request
-import logging
 
-# Set up logging to capture detailed logs
-logging.basicConfig(level=logging.DEBUG)
-
-# Bright Data Proxy credentials
+# Proxy Configuration
 PROXY_HOST = "brd.superproxy.io"
-PROXY_PORT = 33335
-USERNAME = "brd-customer-hl_19ba380f-zone-residential_proxy1"  # Replace with your username
-PASSWORD = "ge8id0hnocik"  # Replace with your password
+PROXY_PORT = 33335  # Updated to Bright Data's required port
+USERNAME = "hl_ad020a32"  # Replace with your actual username
+PASSWORD = "0pe6ey6amntt"  # Replace with your actual password
 
-# Set up SOCKS5 proxy for DNS and HTTP requests
+# SSL Certificate Path
+SSL_CERT_PATH = "BrightData SSL certificate (port 33335).crt"
+
+# Set up SOCKS5 proxy and SSL context for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
-socket.socket = socks.socksocket
+ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 
-# Proxy handler for urllib requests (HTTP/HTTPS)
-opener = urllib.request.build_opener(
-    urllib.request.ProxyHandler(
-        {'http': f'http://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}',
-         'https': f'http://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}'}))
+# Initialize Flask app
+app = Flask(__name__)
 
-# Test if proxy is working by opening a URL
-try:
-    response = opener.open('https://geo.brdtest.com/mygeo.json')
-    logging.debug(f"Proxy working: {response.read()}")
-except Exception as e:
-    logging.error(f"Error connecting via proxy: {str(e)}")
-
-# Function to check MX records via DNS resolution
-def check_mx_records(domain):
-    try:
-        logging.debug(f"Resolving MX records for domain: {domain}")
-        mx_records = dns.resolver.resolve(domain, 'MX')
-        for mx in mx_records:
-            logging.debug(f"MX Record: {mx.exchange}")
-        return True
-    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
-        logging.error(f"MX resolution error: {str(e)}")
-        return False
-
-# Function to check SMTP connection
-def check_smtp_connection(email):
-    domain = email.split('@')[1]
-    try:
-        # Resolve MX record
-        mx_records = dns.resolver.resolve(domain, 'MX')
-        mx_record = str(mx_records[0].exchange)
-        logging.debug(f"Connecting to SMTP server: {mx_record}")
-
-        # Connect to the SMTP server
-        server = smtplib.SMTP(mx_record, 25, timeout=10)
-        server.set_debuglevel(1)  # Show debugging info
-        server.helo()
-        server.mail('test@example.com')
-        code, message = server.rcpt(email)
-        server.quit()
-
-        if code == 250:
-            logging.debug(f"SMTP connection successful for {email}")
-            return True
-        else:
-            logging.error(f"SMTP response code: {code} - {message}")
-            return False
-    except Exception as e:
-        logging.error(f"SMTP connection error: {str(e)}")
-        return False
-
-# Function to handle email verification
-def verify_email(email):
-    domain = email.split('@')[1]
-
-    logging.debug(f"Starting verification for email: {email}")
-
-    if not check_mx_records(domain):
-        return {"status": "error", "message": "DNS resolution failed for MX record"}
+def verifyemail(email):
+    mx = getrecords(email)
     
-    if not check_smtp_connection(email):
-        return {"status": "error", "message": "SMTP connection error"}
-    
-    return {"status": "success", "message": "Email is valid"}
+    # Log the MX records for debugging
+    print("MX Records:", mx)
 
-# Example usage
-email_to_verify = 'test@pavoi.com'
-verification_result = verify_email(email_to_verify)
+    # Check if MX records are valid
+    if mx != 0 and len(mx) > 0:
+        fake = findcatchall(email, mx)
+        fake = 'Yes' if fake > 0 else 'No'
+        
+        try:
+            # Set up the SMTP connection
+            smtp = smtplib.SMTP(mx, 25)  # Use MX server and port 25 for SMTP
+            smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
+            
+            # Perform EHLO command to initiate session
+            smtp.ehlo()
+            
+            # Run the email verification
+            results = checkemail(email, mx)
+            status = 'Good' if results[0] == 250 else 'Bad'
+            
+            # Close the SMTP connection
+            smtp.quit()
+            
+            data = {
+                'email': email,
+                'mx': mx,
+                'code': results[0],
+                'message': results[1],
+                'status': status,
+                'catch_all': fake
+            }
+            return jsonify(data), 200
+        except Exception as e:
+            return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
+    else:
+        return jsonify({'error': 'Invalid MX records or no MX records found'}), 500
 
-logging.debug(f"Verification result for {email_to_verify}: {verification_result}")
+@app.route('/api/v1/verify/', methods=['GET'])
+def search():
+    addr = request.args.get('q')
+    if not validators.email(addr):
+        return jsonify({'Error': 'Invalid email address'}), 400
+    data = verifyemail(addr)
+    return data
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=8080, debug=True)
