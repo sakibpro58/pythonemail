@@ -9,10 +9,10 @@ import smtplib
 import ssl
 
 # Proxy Configuration
-PROXY_HOST = "brd.superproxy.io"
+PROXY_HOST = "brd.superproxy.io:33335"
 PROXY_PORT = 33335  # Updated to Bright Data's required port
-USERNAME = "hl_ad020a32"  # Replace with your actual username
-PASSWORD = "0pe6ey6amntt"  # Replace with your actual password
+USERNAME = "brd-customer-hl_19ba380f-zone-residential_proxy1"  # Replace with your actual username
+PASSWORD = "ge8id0hnocik"  # Replace with your actual password
 
 # SSL Certificate Path
 SSL_CERT_PATH = "BrightData SSL certificate (port 33335).crt"
