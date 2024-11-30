@@ -31,12 +31,13 @@ def resolve_mx_via_google(mx_record):
     resolver.nameservers = ['8.8.8.8', '8.8.4.4']  # Google DNS for public resolution
     
     try:
+        print(f"Attempting to resolve MX record for: {mx_record}")
         answers = resolver.resolve(mx_record, 'MX')
         for rdata in answers:
             print(f"Resolved {mx_record} to {rdata.exchange}")
             return str(rdata.exchange)
     except Exception as e:
-        print(f"Failed to resolve {mx_record}: {e}")
+        print(f"Failed to resolve {mx_record} with Google DNS: {e}")
         return None
 
 def verifyemail(email):
@@ -68,6 +69,7 @@ def verifyemail(email):
         
         try:
             # Set up the SMTP connection using the resolved MX record
+            print(f"Attempting SMTP connection to {resolved_mx}")
             smtp = smtplib.SMTP(resolved_mx, 25)  # Use resolved MX server and port 25 for SMTP
             smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
             
