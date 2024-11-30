@@ -4,6 +4,10 @@ import ssl
 import socket
 import dns.resolver
 import urllib.request
+import logging
+
+# Set up logging to capture detailed logs
+logging.basicConfig(level=logging.DEBUG)
 
 # Bright Data Proxy credentials
 PROXY_HOST = "brd.superproxy.io"
@@ -24,23 +28,21 @@ opener = urllib.request.build_opener(
 # Test if proxy is working by opening a URL
 try:
     response = opener.open('https://geo.brdtest.com/mygeo.json')
-    print(f"Proxy working: {response.read()}")
+    logging.debug(f"Proxy working: {response.read()}")
 except Exception as e:
-    print(f"Error connecting via proxy: {str(e)}")
-
+    logging.error(f"Error connecting via proxy: {str(e)}")
 
 # Function to check MX records via DNS resolution
 def check_mx_records(domain):
     try:
-        print(f"Resolving MX records for domain: {domain}")
+        logging.debug(f"Resolving MX records for domain: {domain}")
         mx_records = dns.resolver.resolve(domain, 'MX')
         for mx in mx_records:
-            print(f"MX Record: {mx.exchange}")
+            logging.debug(f"MX Record: {mx.exchange}")
         return True
     except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
-        print(f"MX resolution error: {str(e)}")
+        logging.error(f"MX resolution error: {str(e)}")
         return False
-
 
 # Function to check SMTP connection
 def check_smtp_connection(email):
@@ -49,7 +51,7 @@ def check_smtp_connection(email):
         # Resolve MX record
         mx_records = dns.resolver.resolve(domain, 'MX')
         mx_record = str(mx_records[0].exchange)
-        print(f"Connecting to SMTP server: {mx_record}")
+        logging.debug(f"Connecting to SMTP server: {mx_record}")
 
         # Connect to the SMTP server
         server = smtplib.SMTP(mx_record, 25, timeout=10)
@@ -60,19 +62,20 @@ def check_smtp_connection(email):
         server.quit()
 
         if code == 250:
+            logging.debug(f"SMTP connection successful for {email}")
             return True
         else:
+            logging.error(f"SMTP response code: {code} - {message}")
             return False
     except Exception as e:
-        print(f"SMTP connection error: {str(e)}")
+        logging.error(f"SMTP connection error: {str(e)}")
         return False
-
 
 # Function to handle email verification
 def verify_email(email):
     domain = email.split('@')[1]
 
-    print(f"Starting verification for email: {email}")
+    logging.debug(f"Starting verification for email: {email}")
 
     if not check_mx_records(domain):
         return {"status": "error", "message": "DNS resolution failed for MX record"}
@@ -82,9 +85,8 @@ def verify_email(email):
     
     return {"status": "success", "message": "Email is valid"}
 
-
 # Example usage
 email_to_verify = 'test@pavoi.com'
 verification_result = verify_email(email_to_verify)
 
-print(f"Verification result for {email_to_verify}: {verification_result}")
+logging.debug(f"Verification result for {email_to_verify}: {verification_result}")
