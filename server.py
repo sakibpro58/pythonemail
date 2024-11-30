@@ -3,7 +3,7 @@ import smtplib
 import ssl
 import socket
 import dns.resolver
-from email_validator import validate_email, EmailNotValidError
+import re
 import urllib.request
 
 # Bright Data Proxy credentials
@@ -20,8 +20,7 @@ socket.socket = socks.socksocket
 opener = urllib.request.build_opener(
     urllib.request.ProxyHandler(
         {'http': f'http://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}',
-         'https': f'http://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}'})
-)
+         'https': f'http://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}'}))
 
 # Test if proxy is working by opening a URL
 try:
@@ -30,13 +29,13 @@ try:
 except Exception as e:
     print(f"Error connecting via proxy: {str(e)}")
 
-# Function to validate email syntax
+# Function to validate email syntax using regular expression
 def is_valid_email_syntax(email):
-    try:
-        validate_email(email)
+    # Regular expression for basic email validation
+    regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    if re.match(regex, email):
         return True
-    except EmailNotValidError:
-        return False
+    return False
 
 # Function to check MX records via DNS resolution
 def check_mx_records(domain):
@@ -89,4 +88,3 @@ email_to_verify = 'test@pavoi.com'
 verification_result = verify_email(email_to_verify)
 
 print(f"Verification result for {email_to_verify}: {verification_result}")
-
