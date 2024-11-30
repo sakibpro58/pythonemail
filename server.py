@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+import os
 from libs.mx import getrecords
 from libs.email import checkemail, findcatchall
 from flask import Flask, request, jsonify
@@ -8,14 +7,14 @@ import socks
 import smtplib
 import ssl
 
-# Proxy Configuration
-PROXY_HOST = "brd.superproxy.io"
-PROXY_PORT = 33335  # Updated to Bright Data's required port
-USERNAME = "hl_ad020a32"  # Replace with your actual username
-PASSWORD = "0pe6ey6amntt"  # Replace with your actual password
+# Proxy Configuration - Get from environment variables
+PROXY_HOST = os.getenv('PROXY_HOST', 'brd.superproxy.io')  # Default to proxy if env var not set
+PROXY_PORT = int(os.getenv('PROXY_PORT', 33335))  # Default port
+USERNAME = os.getenv('PROXY_USERNAME', 'hl_ad020a32')  # Proxy username
+PASSWORD = os.getenv('PROXY_PASSWORD', '0pe6ey6amntt')  # Proxy password
 
-# SSL Certificate Path
-SSL_CERT_PATH = "BrightDataSSLcertificate.crt"
+# SSL Certificate Path (Optional, if using SSL cert for Bright Data)
+SSL_CERT_PATH = os.getenv('SSL_CERT_PATH', 'BrightDataSSLcertificate.crt')
 
 # Set up SOCKS5 proxy and SSL context for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
