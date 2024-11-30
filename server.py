@@ -51,18 +51,9 @@ def verifyemail(email):
         fake = findcatchall(email, mx)
         fake = 'Yes' if fake > 0 else 'No'
 
-        # Try resolving MX records using the proxy DNS if it is supported
-        resolved_mx = None
-        try:
-            # Attempt DNS resolution via proxy
-            socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
-            resolved_mx = resolve_mx_via_google(mx[0])
-            if resolved_mx is None:
-                raise Exception("DNS resolution failed through proxy")
-        except Exception as e:
-            print(f"Error resolving MX record through proxy: {e}")
-            resolved_mx = resolve_mx_via_google(mx[0])  # Fallback to Google DNS
-
+        # Try resolving MX records using Google DNS (ignoring proxy for DNS resolution)
+        resolved_mx = resolve_mx_via_google(mx[0])
+        
         # If MX resolution fails, return an error
         if not resolved_mx:
             return jsonify({'error': 'DNS resolution failed for MX record'}), 500
@@ -70,6 +61,8 @@ def verifyemail(email):
         try:
             # Set up the SMTP connection using the resolved MX record
             print(f"Attempting SMTP connection to {resolved_mx}")
+            # Use the SOCKS proxy for SMTP connections, but skip proxy for DNS resolution
+            socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
             smtp = smtplib.SMTP(resolved_mx, 25)  # Use resolved MX server and port 25 for SMTP
             smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
             
