@@ -98,10 +98,10 @@ def search():
     if not validators.email(addr):
         return jsonify({'Error': 'Invalid email address'}), 400
 
-    data = verifyemail(addr)
-    if data['error'] == 'Failed to resolve MX record via Google DNS':
+    response, status_code = verifyemail(addr)
+    if status_code == 500 and 'Failed to resolve MX record via Google DNS' in response.json().get('error', ''):
         return jsonify({'error': 'Failed to resolve MX record. Please check the domain or MX records.'}), 500
-    return data
+    return response
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080, debug=True)
