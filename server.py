@@ -9,13 +9,13 @@ import smtplib
 import ssl
 
 # Proxy Configuration
-PROXY_HOST = "brd.superproxy.io:33335"
+PROXY_HOST = "brd.superproxy.io"
 PROXY_PORT = 33335  # Updated to Bright Data's required port
 USERNAME = "brd-customer-hl_19ba380f-zone-residential_proxy1"  # Replace with your actual username
 PASSWORD = "ge8id0hnocik"  # Replace with your actual password
 
 # SSL Certificate Path
-SSL_CERT_PATH = "BrightData SSL certificate (port 33335).crt"
+SSL_CERT_PATH = "BrightDataSSLcertificate.crt"
 
 # Set up SOCKS5 proxy and SSL context for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
@@ -37,7 +37,7 @@ def verifyemail(email):
         
         try:
             # Set up the SMTP connection
-            smtp = smtplib.SMTP(mx, 25)  # Use MX server and port 25 for SMTP
+            smtp = smtplib.SMTP(mx[0], 25)  # Use MX server and port 25 for SMTP
             smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
             
             # Perform EHLO command to initiate session
