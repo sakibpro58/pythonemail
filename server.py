@@ -2,7 +2,7 @@
 
 from libs.mx import getrecords
 from libs.email import checkemail, findcatchall
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 import validators
 import socks
 import smtplib
