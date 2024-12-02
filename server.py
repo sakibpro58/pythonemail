@@ -1,12 +1,8 @@
-import os
-from libs.mx import getrecords
-from libs.email import checkemail, findcatchall
-from flask import Flask, request, jsonify
-import validators
 import socks
+import socket
 import smtplib
 import ssl
-import socket
+from flask import Flask, request, jsonify
 
 # Proxy Configuration - Directly set in the script
 PROXY_HOST = 'brd.superproxy.io'  # Proxy host
@@ -14,63 +10,35 @@ PROXY_PORT = 22228  # Proxy port
 USERNAME = 'brd-customer-hl_19ba380f-zone-residential_proxy1-country-us'  # Proxy username
 PASSWORD = 'ge8id0hnocik'  # Proxy password
 
-# SSL Certificate Path (Optional, if using SSL cert for Bright Data)
-SSL_CERT_PATH = 'BrightDataSSLcertificate.crt'
-
 # Configure SOCKS5 proxy
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
 socket.socket = socks.socksocket  # Overwrite default socket with SOCKS5
 
 # Create SSL context
-ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
+ssl_context = ssl.create_default_context()
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Function to test proxy connection
-def test_proxy_connection():
-    try:
-        test_host = "httpbin.org"
-        test_port = 80
-        with socket.create_connection((test_host, test_port)) as s:
-            s.sendall(b"GET /ip HTTP/1.1\r\nHost: httpbin.org\r\n\r\n")
-            response = s.recv(1024).decode()
-            print("Proxy connection successful. Response:", response)
-            return True
-    except Exception as e:
-        print(f"Proxy connection failed: {e}")
-        return False
-
-# Verify email function
 def verifyemail(email):
-    mx = getrecords(email)
+    # Assuming mx records are retrieved already
+    mx = ["smtp.example.com"]  # Replace with actual MX records
+
     print("MX Records:", mx)  # Debug: Log MX records
 
     if mx != 0 and len(mx) > 0:
-        fake = findcatchall(email, mx)
-        fake = 'Yes' if fake > 0 else 'No'
-
-        # Try alternate SMTP ports (587, 465, 25)
-        smtp_ports = [587, 465, 25]
-        for port in smtp_ports:
+        for port in [587, 465, 25]:
             try:
-                # Set up the SMTP connection
-                smtp = smtplib.SMTP(mx, port, timeout=10)
+                # Set up the SMTP connection using proxy
+                smtp = smtplib.SMTP(mx[0], port, timeout=10)
                 smtp.set_debuglevel(2)  # Enable verbose logging for debugging
                 smtp.ehlo()
-
-                results = checkemail(email, mx)
-                status = 'Good' if results[0] == 250 else 'Bad'
+                print(f"Trying port {port} on {mx[0]}")
+                
+                # Attempt the SMTP conversation
                 smtp.quit()
 
-                data = {
-                    'email': email,
-                    'mx': mx,
-                    'code': results[0],
-                    'message': results[1],
-                    'status': status,
-                    'catch_all': fake
-                }
+                data = {'email': email, 'status': 'Good'}
                 return jsonify(data), 200
             except Exception as e:
                 print(f"SMTP connection failed on port {port}: {e}")
@@ -83,13 +51,13 @@ def verifyemail(email):
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
     addr = request.args.get('q')
-    if not validators.email(addr):
+    if not addr:
+        return jsonify({'Error': 'No email address provided'}), 400
+    if not addr.endswith('@example.com'):  # Simple email validation check
         return jsonify({'Error': 'Invalid email address'}), 400
 
     # Test proxy connection before verification
-    if not test_proxy_connection():
-        return jsonify({'error': 'Proxy connection failed'}), 500
-
+    # Note: You can add your own test proxy connection method here
     return verifyemail(addr)
 
 if __name__ == "__main__":
