@@ -6,3 +6,4 @@ flask-restx
 smtplib
 ssl
 flask-cors
+requests
