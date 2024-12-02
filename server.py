@@ -7,19 +7,15 @@ import socks
 import smtplib
 import ssl
 import socket
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Proxy Configuration - Get from environment variables
-PROXY_HOST = os.getenv('PROXY_HOST', 'brd.superproxy.io')  # Default proxy host
-PROXY_PORT = int(os.getenv('PROXY_PORT', 22228))  # Default proxy port
-USERNAME = os.getenv('PROXY_USERNAME', 'brd-customer-hl_19ba380f-zone-residential_proxy1-country-us')  # Proxy username
-PASSWORD = os.getenv('PROXY_PASSWORD', 'ge8id0hnocik')  # Proxy password
+# Proxy Configuration (hardcoded values instead of .env)
+PROXY_HOST = 'brd.superproxy.io'  # Proxy host
+PROXY_PORT = 22228  # Proxy port
+USERNAME = 'brd-customer-hl_19ba380f-zone-residential_proxy1-country-us'  # Proxy username
+PASSWORD = 'ge8id0hnocik'  # Proxy password
 
 # SSL Certificate Path (Optional, if using SSL cert for Bright Data)
-SSL_CERT_PATH = os.getenv('SSL_CERT_PATH', 'BrightDataSSLcertificate.crt')
+SSL_CERT_PATH = 'BrightDataSSLcertificate.crt'  # Update path if necessary
 
 # Configure SOCKS5 proxy
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
