@@ -10,7 +10,7 @@ import socket
 
 # Proxy Configuration - Directly set in the script
 PROXY_HOST = 'brd.superproxy.io'  # Proxy host
-PROXY_PORT = 22228  # Proxy port
+PROXY_PORT = 33335  # Proxy port
 USERNAME = 'brd-customer-hl_19ba380f-zone-residential_proxy1-country-us'  # Proxy username
 PASSWORD = 'ge8id0hnocik'  # Proxy password
 
