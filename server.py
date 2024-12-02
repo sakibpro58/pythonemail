@@ -24,16 +24,18 @@ ssl_context = ssl.create_default_context()
 # Initialize Flask app
 app = Flask(__name__)
 
-# Function to test proxy connection (optional, for debugging)
+# Function to test proxy connection with enhanced debugging
 def test_proxy_connection():
     try:
         test_host = "httpbin.org"
         test_port = 80
         # Use http.client to send a request through the proxy
+        print(f"Testing connection to {test_host} via proxy {PROXY_HOST}:{PROXY_PORT}")
         connection = http.client.HTTPSConnection(test_host)
         connection.request("GET", "/ip")
         response = connection.getresponse()
-        print("Proxy connection successful. Response:", response.read().decode())
+        print(f"Proxy connection successful. Response status: {response.status}")
+        print(f"Response: {response.read().decode()}")
         connection.close()
         return True
     except Exception as e:
