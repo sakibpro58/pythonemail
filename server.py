@@ -5,18 +5,21 @@ import validators
 import dns.resolver
 import smtplib
 import logging
+from libs.mx import getrecords
+from libs.email import checkemail, findcatchall
 
-# Proxy Configuration (if required)
+# Proxy Configuration (Updated to Smartproxy)
 import socks
-PROXY_HOST = "gate.smartproxy.com"
-PROXY_PORT = 7000
-USERNAME = "user-sp3wtagw87-session-1"
-PASSWORD = "liUFvsaye3l4+4QlU7"
+PROXY_HOST = "gate.smartproxy.com"  # New proxy host (Smartproxy)
+PROXY_PORT = 7000  # Updated to the new Smartproxy port
+USERNAME = "user-sp3wtagw87-session-1"  # Replace with your Smartproxy username
+PASSWORD = "liUFvsaye3l4+4QlU7"  # Replace with your Smartproxy password
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
 
 # Initialize Flask app
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
+logging.debug(f"Using proxy: {PROXY_HOST}:{PROXY_PORT}")
 
 def resolve_mx_records(domain):
     """
@@ -41,23 +44,38 @@ def resolve_mx_records(domain):
 
 def verifyemail(email):
     """
-    Verify email address by resolving MX records and attempting SMTP handshake.
+    Verify email address using DNS MX records and SMTP.
     """
     domain = email.split('@')[-1]
     mx_records = resolve_mx_records(domain)
-    
+
     if not mx_records:
         return jsonify({'email': email, 'status': 'Invalid', 'message': 'No MX records found'}), 400
+
+    fake = findcatchall(email, mx_records)
+    fake_status = 'Yes' if fake > 0 else 'No'
 
     try:
         # Attempt SMTP handshake with the first MX record
         smtp = smtplib.SMTP(mx_records[0], 25)
         smtp.set_debuglevel(1)
         smtp.ehlo()
+
+        # Run the deeper email verification check
+        results = checkemail(email, mx_records)
+        status = 'Good' if results[0] == 250 else 'Bad'
+
+        # Close the SMTP connection
         smtp.quit()
-        
-        # Successful handshake implies the email's domain is functional
-        return jsonify({'email': email, 'status': 'Valid', 'message': 'SMTP handshake successful'}), 200
+
+        return jsonify({
+            'email': email,
+            'mx': mx_records,
+            'code': results[0],
+            'message': results[1],
+            'status': status,
+            'catch_all': fake_status
+        }), 200
     except smtplib.SMTPException as e:
         logging.error(f"SMTP error for {email}: {e}")
         return jsonify({'email': email, 'status': 'Invalid', 'message': str(e)}), 400
@@ -75,3 +93,4 @@ def search():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080, debug=True)
+
