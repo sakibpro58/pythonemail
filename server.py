@@ -31,7 +31,7 @@ def test_proxy_connection():
         response = requests.get(url="https://httpbin.org/ip", proxies=proxies, verify=False)
         print("Proxy connection successful. Response:", response.content.decode())
         return True
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         print(f"Proxy connection failed: {e}")
         return False
 
