@@ -1,4 +1,3 @@
-requests
 dnspython
 pysocks
 validators
@@ -6,6 +5,5 @@ flask
 flask-restx
 smtplib
 ssl
+requests
 flask-cors
-
-
