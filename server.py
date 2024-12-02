@@ -7,16 +7,16 @@ import socks
 import smtplib
 import ssl
 import socket
-import requests
+import http.client
 
-# Proxy Configuration - Directly set in the script
-PROXY_HOST = 'gate.smartproxy.com'  # New Proxy host (SmartProxy)
-PROXY_PORT = 7000  # New Proxy port
-PASSWORD = 'liUFvsaye3l4+4QlU7'  # Proxy password
+# Proxy Configuration - Directly set in the script without username
+PROXY_HOST = 'gate.smartproxy.com'  # Proxy host
+PROXY_PORT = 7000  # Proxy port
+PASSWORD = 'liUFvsaye3l4+4QlU7'  # Proxy password (no username required)
 
-# Configure SOCKS5 proxy without username (SmartProxy)
-proxy_url = f"socks5h://{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}"
-proxies = {"http": proxy_url, "https": proxy_url}
+# Configure SOCKS5 proxy without username
+socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, PASSWORD, None)
+socket.socket = socks.socksocket  # Overwrite default socket with SOCKS5
 
 # Create SSL context
 ssl_context = ssl.create_default_context()
@@ -27,11 +27,16 @@ app = Flask(__name__)
 # Function to test proxy connection (optional, for debugging)
 def test_proxy_connection():
     try:
-        # Test connection through the proxy
-        response = requests.get(url="https://httpbin.org/ip", proxies=proxies, verify=False)
-        print("Proxy connection successful. Response:", response.content.decode())
+        test_host = "httpbin.org"
+        test_port = 80
+        # Use http.client to send a request through the proxy
+        connection = http.client.HTTPSConnection(test_host)
+        connection.request("GET", "/ip")
+        response = connection.getresponse()
+        print("Proxy connection successful. Response:", response.read().decode())
+        connection.close()
         return True
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"Proxy connection failed: {e}")
         return False
 
