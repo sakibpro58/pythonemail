@@ -1,110 +1,77 @@
 #!/usr/bin/env python
 
-from libs.mx import getrecords
-from libs.email import checkemail, findcatchall
 from flask import Flask, jsonify, request
 import validators
-import socks
+import dns.resolver
 import smtplib
-import urllib.request
-import json
 import logging
-import socket
 
-# Proxy Configuration (Smartproxy)
+# Proxy Configuration (if required)
+import socks
 PROXY_HOST = "gate.smartproxy.com"
 PROXY_PORT = 7000
 USERNAME = "user-sp3wtagw87-session-1"
 PASSWORD = "liUFvsaye3l4+4QlU7"
-
-# Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
-socks.wrapmodule(smtplib)
 
 # Initialize Flask app
 app = Flask(__name__)
-
-# Logging setup
 logging.basicConfig(level=logging.DEBUG)
-logging.debug(f"Using proxy: {PROXY_HOST}:{PROXY_PORT}")
 
-def check_ip():
-    """Check and log the current IP address through the proxy."""
+def resolve_mx_records(domain):
+    """
+    Resolve MX records for a domain using dnspython.
+    """
     try:
-        proxy_support = urllib.request.ProxyHandler({
-            'http': f'socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}',
-            'https': f'socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}'
-        })
-        opener = urllib.request.build_opener(proxy_support)
-        urllib.request.install_opener(opener)
-
-        with urllib.request.urlopen('https://ip.smartproxy.com/json') as response:
-            ip_data = json.load(response)
-            logging.info("Current IP through proxy: %s", ip_data['ip'])
+        answers = dns.resolver.resolve(domain, 'MX')
+        mx_records = [str(r.exchange).rstrip('.') for r in answers]
+        return mx_records
+    except dns.resolver.NoAnswer:
+        logging.error(f"No MX records found for domain: {domain}")
+        return []
+    except dns.resolver.NXDOMAIN:
+        logging.error(f"Domain does not exist: {domain}")
+        return []
+    except dns.resolver.Timeout:
+        logging.error(f"Timeout occurred while resolving MX records for: {domain}")
+        return []
     except Exception as e:
-        logging.error("Error fetching IP through proxy: %s", e)
-
-check_ip()
-
-def get_ipv4_mx_records(mx_records):
-    """Filter MX records to return only valid IPv4 addresses."""
-    ipv4_records = []
-    for record in mx_records:
-        if not record or len(record) > 255 or '.' not in record:
-            logging.warning(f"Invalid MX record skipped: {record}")
-            continue
-        try:
-            ipv4_address = socket.gethostbyname(record)
-            ipv4_records.append(ipv4_address)
-        except socket.gaierror as e:
-            logging.warning(f"Skipping invalid or unresolvable record: {record}, Error: {e}")
-    return ipv4_records
+        logging.error(f"Error resolving MX records for {domain}: {e}")
+        return []
 
 def verifyemail(email):
-    mx = getrecords(email)
-    logging.debug("Original MX Records: %s", mx)
-
-    ipv4_mx = get_ipv4_mx_records(mx)
-    logging.debug("Filtered IPv4 MX Records: %s", ipv4_mx)
-
-    if not ipv4_mx:
-        logging.error("No valid IPv4 MX records found for %s", email)
-        return jsonify({'error': 'No valid IPv4 MX records found after filtering'}), 500
-
-    fake = findcatchall(email, ipv4_mx)
-    fake = 'Yes' if fake > 0 else 'No'
+    """
+    Verify email address by resolving MX records and attempting SMTP handshake.
+    """
+    domain = email.split('@')[-1]
+    mx_records = resolve_mx_records(domain)
+    
+    if not mx_records:
+        return jsonify({'email': email, 'status': 'Invalid', 'message': 'No MX records found'}), 400
 
     try:
-        smtp = smtplib.SMTP(ipv4_mx[0], 25)
+        # Attempt SMTP handshake with the first MX record
+        smtp = smtplib.SMTP(mx_records[0], 25)
         smtp.set_debuglevel(1)
         smtp.ehlo()
-
-        results = checkemail(email, ipv4_mx)
-        status = 'Good' if results[0] == 250 else 'Bad'
-
         smtp.quit()
-
-        data = {
-            'email': email,
-            'mx': ipv4_mx,
-            'code': results[0],
-            'message': results[1],
-            'status': status,
-            'catch_all': fake
-        }
-        return jsonify(data), 200
+        
+        # Successful handshake implies the email's domain is functional
+        return jsonify({'email': email, 'status': 'Valid', 'message': 'SMTP handshake successful'}), 200
+    except smtplib.SMTPException as e:
+        logging.error(f"SMTP error for {email}: {e}")
+        return jsonify({'email': email, 'status': 'Invalid', 'message': str(e)}), 400
     except Exception as e:
-        logging.error("SMTP connection error: %s", e)
-        return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
+        logging.error(f"Unexpected error for {email}: {e}")
+        return jsonify({'email': email, 'status': 'Error', 'message': str(e)}), 500
 
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
     addr = request.args.get('q')
     if not validators.email(addr):
-        logging.warning("Invalid email address provided: %s", addr)
-        return jsonify({'Error': 'Invalid email address'}), 400
-    data = verifyemail(addr)
-    return data
+        logging.warning(f"Invalid email address provided: {addr}")
+        return jsonify({'error': 'Invalid email address'}), 400
+    return verifyemail(addr)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080, debug=True)
