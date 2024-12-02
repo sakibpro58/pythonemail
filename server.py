@@ -7,6 +7,10 @@ import socks
 import smtplib
 import ssl
 import socket
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Proxy Configuration - Get from environment variables
 PROXY_HOST = os.getenv('PROXY_HOST', 'brd.superproxy.io')  # Default proxy host
@@ -14,7 +18,7 @@ PROXY_PORT = int(os.getenv('PROXY_PORT', 22228))  # Default proxy port
 USERNAME = os.getenv('PROXY_USERNAME', 'brd-customer-hl_19ba380f-zone-residential_proxy1-country-us')  # Proxy username
 PASSWORD = os.getenv('PROXY_PASSWORD', 'ge8id0hnocik')  # Proxy password
 
-# SSL Certificate Path
+# SSL Certificate Path (Optional, if using SSL cert for Bright Data)
 SSL_CERT_PATH = os.getenv('SSL_CERT_PATH', 'BrightDataSSLcertificate.crt')
 
 # Configure SOCKS5 proxy
@@ -30,19 +34,13 @@ app = Flask(__name__)
 # Function to test proxy connection
 def test_proxy_connection():
     try:
-        import requests
-        proxies = {
-            "http": f"socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}",
-            "https": f"socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}",
-        }
-        url = "https://geo.brdtest.com/welcome.txt"
-        response = requests.get(url, proxies=proxies, verify=SSL_CERT_PATH)
-        if response.status_code == 200:
-            print("Proxy connection successful. Response:", response.text)
+        test_host = "httpbin.org"
+        test_port = 80
+        with socket.create_connection((test_host, test_port)) as s:
+            s.sendall(b"GET /ip HTTP/1.1\r\nHost: httpbin.org\r\n\r\n")
+            response = s.recv(1024).decode()
+            print("Proxy connection successful. Response:", response)
             return True
-        else:
-            print(f"Proxy test failed. Status code: {response.status_code}")
-            return False
     except Exception as e:
         print(f"Proxy connection failed: {e}")
         return False
