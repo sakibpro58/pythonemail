@@ -6,7 +6,6 @@ from flask import Flask, jsonify, request
 import validators
 import socks
 import smtplib
-import ssl
 import urllib.request
 import json
 import logging
@@ -17,14 +16,11 @@ PROXY_PORT = 7000  # Updated to the new Smartproxy port
 USERNAME = "user-sp3wtagw87-session-1"  # Replace with your Smartproxy username
 PASSWORD = "liUFvsaye3l4+4QlU7"  # Replace with your Smartproxy password
 
-# SSL Certificate Path (If required by new proxy provider)
-SSL_CERT_PATH = "path_to_certificate.crt"  # You can adjust this or remove if not needed
 
 # Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
 
-# Optionally, configure SSL if the new provider requires it
-ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
+
 
 # Initialize Flask app
 app = Flask(__name__)
