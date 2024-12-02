@@ -13,11 +13,12 @@ import logging
 # Proxy Configuration (Updated to Smartproxy)
 PROXY_HOST = "gate.smartproxy.com"  # New proxy host (Smartproxy)
 PROXY_PORT = 7000  # Updated to the new Smartproxy port
-USERNAME = "user-sp3wtagw87-session-1"  # Replace with your Smartproxy username
+USERNAME = "sp3wtagw87"  # Replace with your Smartproxy username
 PASSWORD = "liUFvsaye3l4+4QlU7"  # Replace with your Smartproxy password
 
 # Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
+socks.wrapmodule(smtplib)  # Ensure smtplib uses the SOCKS5 proxy
 
 # Initialize Flask app
 app = Flask(__name__)
