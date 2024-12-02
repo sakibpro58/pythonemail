@@ -91,15 +91,9 @@ def verifyemail(email):
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
     addr = request.args.get('q')
-    
-    # Log the email address being validated
-    logging.debug(f"Received email address to verify: {addr}")
-    
     if not validators.email(addr):
-        logging.warning(f"Invalid email address provided: {addr}")
+        logging.warning("Invalid email address provided: %s", addr)
         return jsonify({'Error': 'Invalid email address'}), 400
-    
-    # Proceed with email verification if valid
     data = verifyemail(addr)
     return data
 
