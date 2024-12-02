@@ -8,14 +8,14 @@ import smtplib
 import ssl
 import socket
 
-# Proxy Configuration (hardcoded values instead of .env)
-PROXY_HOST = 'brd.superproxy.io'  # Proxy host
-PROXY_PORT = 22228  # Proxy port
+# Proxy Configuration - Set directly here (since we're not using .env)
+PROXY_HOST = 'brd.superproxy.io'  # Default proxy host
+PROXY_PORT = 22228  # Default proxy port
 USERNAME = 'brd-customer-hl_19ba380f-zone-residential_proxy1-country-us'  # Proxy username
 PASSWORD = 'ge8id0hnocik'  # Proxy password
 
 # SSL Certificate Path (Optional, if using SSL cert for Bright Data)
-SSL_CERT_PATH = 'BrightDataSSLcertificate.crt'  # Update path if necessary
+SSL_CERT_PATH = 'BrightDataSSLcertificate.crt'
 
 # Configure SOCKS5 proxy
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
@@ -51,8 +51,17 @@ def verifyemail(email):
         fake = 'Yes' if fake > 0 else 'No'
 
         try:
-            # Set up the SMTP connection
-            smtp = smtplib.SMTP(mx, 25)
+            # Force using IPv4 for SMTP connection
+            smtp_host = mx[0]  # Assume mx[0] is the primary MX record
+            smtp_port = 25
+
+            # Create an IPv4 socket
+            smtp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            smtp_socket.connect((smtp_host, smtp_port))
+
+            # Use the SMTP connection
+            smtp = smtplib.SMTP()
+            smtp.sock = smtp_socket  # Manually set the socket to the created IPv4 socket
             smtp.set_debuglevel(2)  # Enable verbose logging for debugging
             smtp.ehlo()
 
