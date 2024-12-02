@@ -23,19 +23,27 @@ ssl_context = ssl.create_default_context()
 # Initialize Flask app
 app = Flask(__name__)
 
-# Function to test proxy connection
+# Function to test proxy connection with enhanced error logging
 def test_proxy_connection():
     try:
+        # Test connection to a known server (httpbin.org) via proxy
         test_host = "httpbin.org"
         test_port = 80
+        
+        # Create a socket connection using the proxy
         with socket.create_connection((test_host, test_port)) as s:
             s.sendall(b"GET /ip HTTP/1.1\r\nHost: httpbin.org\r\n\r\n")
             response = s.recv(1024).decode()
             print("Proxy connection successful. Response:", response)
             return True
+    except socket.timeout:
+        print(f"Proxy connection failed: Timeout while connecting to {test_host}:{test_port}")
+    except socket.gaierror:
+        print(f"Proxy connection failed: DNS resolution error for {test_host}")
     except Exception as e:
         print(f"Proxy connection failed: {e}")
-        return False
+    
+    return False
 
 # Verify email function
 def verifyemail(email):
