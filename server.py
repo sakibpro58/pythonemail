@@ -11,8 +11,8 @@ import socket
 # Proxy Configuration - Get from environment variables
 PROXY_HOST = os.getenv('PROXY_HOST', 'brd.superproxy.io')  # Default proxy host
 PROXY_PORT = int(os.getenv('PROXY_PORT', 33335))  # Default proxy port
-USERNAME = os.getenv('PROXY_USERNAME', 'hl_ad020a32')  # Proxy username
-PASSWORD = os.getenv('PROXY_PASSWORD', '0pe6ey6amntt')  # Proxy password
+USERNAME = os.getenv('PROXY_USERNAME', 'brd-customer-hl_19ba380f-zone-residential_proxy1')  # Proxy username
+PASSWORD = os.getenv('PROXY_PASSWORD', 'ge8id0hnocik')  # Proxy password
 
 # SSL Certificate Path (Optional, if using SSL cert for Bright Data)
 SSL_CERT_PATH = os.getenv('SSL_CERT_PATH', 'BrightDataSSLcertificate.crt')
