@@ -7,3 +7,5 @@ smtplib
 ssl
 requests
 flask-cors
+python-dotenv
+
