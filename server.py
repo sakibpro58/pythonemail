@@ -2,12 +2,13 @@
 
 from libs.mx import getrecords
 from libs.email import checkemail, findcatchall
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import validators
 import socks
 import smtplib
 import ssl
-import requests
+import urllib.request
+import json
 import logging
 
 # Proxy Configuration (Updated to Smartproxy)
@@ -35,9 +36,17 @@ logging.debug(f"Using proxy: {PROXY_HOST}:{PROXY_PORT}")
 def check_ip():
     """Function to check and log the current IP address through the proxy."""
     try:
-        response = requests.get('https://ip.smartproxy.com/json')
-        ip_data = response.json()
-        logging.info("Current IP through proxy: %s", ip_data['ip'])
+        proxy_support = urllib.request.ProxyHandler({
+            'http': f'socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}',
+            'https': f'socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}'
+        })
+        opener = urllib.request.build_opener(proxy_support)
+        urllib.request.install_opener(opener)
+        
+        # Fetch the current IP address via proxy
+        with urllib.request.urlopen('https://ip.smartproxy.com/json') as response:
+            ip_data = json.load(response)
+            logging.info("Current IP through proxy: %s", ip_data['ip'])
     except Exception as e:
         logging.error("Error fetching IP through proxy: %s", e)
 
