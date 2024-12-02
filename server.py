@@ -13,7 +13,7 @@ import logging
 # Proxy Configuration (Updated to Smartproxy)
 PROXY_HOST = "gate.smartproxy.com"  # New proxy host (Smartproxy)
 PROXY_PORT = 7000  # Updated to the new Smartproxy port
-USERNAME = "sp3wtagw87"  # Replace with your Smartproxy username
+USERNAME = "user-sp3wtagw87-session-1"  # Replace with your Smartproxy username
 PASSWORD = "liUFvsaye3l4+4QlU7"  # Replace with your Smartproxy password
 
 # Set up SOCKS5 proxy for outgoing connections
@@ -31,7 +31,6 @@ def check_ip():
     try:
         # Setting up the proxy for the requests made through urllib
         proxy_support = urllib.request.ProxyHandler({
-            
             'http': f'socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}',
             'https': f'socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}'
         })
@@ -48,40 +47,38 @@ def check_ip():
 check_ip()
 
 def verifyemail(email):
-    mx_records = getrecords(email)
+    mx = getrecords(email)
     
     # Log the MX records for debugging
-    logging.debug("MX Records: %s", mx_records)
+    logging.debug("MX Records: %s", mx)
 
     # Check if MX records are valid
-    if mx_records and len(mx_records) > 0:
-        mx = mx_records[0]  # Use the first MX record
-        fake = findcatchall(email, mx_records)
-        fake_status = 'Yes' if fake > 0 else 'No'
+    if mx != 0 and len(mx) > 0:
+        fake = findcatchall(email, mx)
+        fake = 'Yes' if fake > 0 else 'No'
         
         try:
             # Set up the SMTP connection
-            smtp = smtplib.SMTP(mx, 25)  # Use the first MX server and port 25 for SMTP
+            smtp = smtplib.SMTP(mx, 25)  # Use MX server and port 25 for SMTP
             smtp.set_debuglevel(1)  # Enable verbose logging for SMTP debugging
             
             # Perform EHLO command to initiate session
             smtp.ehlo()
             
             # Run the email verification
-            results = checkemail(email, mx_records)
+            results = checkemail(email, mx)
             status = 'Good' if results[0] == 250 else 'Bad'
             
             # Close the SMTP connection
             smtp.quit()
             
-            # Build the response
             data = {
                 'email': email,
                 'mx': mx,
                 'code': results[0],
                 'message': results[1],
                 'status': status,
-                'catch_all': fake_status
+                'catch_all': fake
             }
             return jsonify(data), 200
         except Exception as e:
@@ -97,7 +94,8 @@ def search():
     if not validators.email(addr):
         logging.warning("Invalid email address provided: %s", addr)
         return jsonify({'Error': 'Invalid email address'}), 400
-    return verifyemail(addr)
+    data = verifyemail(addr)
+    return data
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080, debug=True)
