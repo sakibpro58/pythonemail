@@ -7,14 +7,16 @@ import socks
 import smtplib
 import ssl
 import socket
+import requests
 
-# Proxy Configuration - Directly set in the script without username
-PROXY_HOST = 'smartproxy.crawlbase.com'  # Proxy host (ProxyCrawl/Smartproxy)
-PROXY_PORT = 8012  # Proxy port
-PASSWORD = 'nr8iuyCY6lwNYCDQIkqlMw'  # Proxy password (no username required)
+# Proxy Configuration - Directly set in the script using SmartProxy's SOCKS5 proxy
+PROXY_HOST = 'gate.smartproxy.com'  # Proxy host (Smartproxy)
+PROXY_PORT = 7000  # Proxy port
+USERNAME = 'user-sp3wtagw87-session-1'  # Proxy username
+PASSWORD = 'liUFvsaye3l4+4QlU7'  # Proxy password
 
-# Configure SOCKS5 proxy without username
-proxy_url = f"http://{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}"
+# Configure SOCKS5 proxy using SmartProxy's proxy URL format
+proxy_url = f"socks5h://{USERNAME}:{PASSWORD}@{PROXY_HOST}:{PROXY_PORT}"
 proxies = {"http": proxy_url, "https": proxy_url}
 
 # Create SSL context
@@ -26,10 +28,9 @@ app = Flask(__name__)
 # Function to test proxy connection (optional, for debugging)
 def test_proxy_connection():
     try:
-        test_host = "httpbin.org"
-        test_port = 80
-        response = requests.get(url=f"http://{test_host}/ip", proxies=proxies, verify=False)
-        print("Proxy connection successful. Response:", response.content.decode())
+        # Use the proxy to send a request to httpbin.org to verify the proxy connection
+        response = requests.get(url="https://httpbin.org/ip", proxies=proxies, verify=False)
+        print("Proxy connection successful. Response:", response.json())  # Print response to see proxy details
         return True
     except Exception as e:
         print(f"Proxy connection failed: {e}")
@@ -43,7 +44,7 @@ def verifyemail(email):
     if mx != 0 and len(mx) > 0:
         for port in [587, 465, 25]:  # Attempt connection on common SMTP ports
             try:
-                # Set up the SMTP connection using proxy
+                # Set up the SMTP connection using the proxy
                 smtp = smtplib.SMTP(mx[0], port, timeout=10)
                 smtp.set_debuglevel(2)  # Enable verbose logging for debugging
                 smtp.ehlo()
