@@ -7,6 +7,8 @@ import validators
 import socks
 import smtplib
 import ssl
+import requests
+import logging
 
 # Proxy Configuration (Updated to Smartproxy)
 PROXY_HOST = "gate.smartproxy.com"  # New proxy host (Smartproxy)
@@ -14,18 +16,38 @@ PROXY_PORT = 7000  # Updated to the new Smartproxy port
 USERNAME = "user-sp3wtagw87-session-1"  # Replace with your Smartproxy username
 PASSWORD = "liUFvsaye3l4+4QlU7"  # Replace with your Smartproxy password
 
+# SSL Certificate Path (If required by new proxy provider)
+SSL_CERT_PATH = "path_to_certificate.crt"  # You can adjust this or remove if not needed
+
 # Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
 
+# Optionally, configure SSL if the new provider requires it
+ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Logging setup to ensure proxy usage
+logging.basicConfig(level=logging.DEBUG)
+logging.debug(f"Using proxy: {PROXY_HOST}:{PROXY_PORT}")
+
+def check_ip():
+    """Function to check and log the current IP address through the proxy."""
+    try:
+        response = requests.get('https://ip.smartproxy.com/json')
+        ip_data = response.json()
+        logging.info("Current IP through proxy: %s", ip_data['ip'])
+    except Exception as e:
+        logging.error("Error fetching IP through proxy: %s", e)
+
+check_ip()
 
 def verifyemail(email):
     mx = getrecords(email)
     
     # Log the MX records for debugging
-    print("MX Records:", mx)
+    logging.debug("MX Records: %s", mx)
 
     # Check if MX records are valid
     if mx != 0 and len(mx) > 0:
@@ -57,14 +79,17 @@ def verifyemail(email):
             }
             return jsonify(data), 200
         except Exception as e:
+            logging.error("SMTP connection error: %s", e)
             return jsonify({'error': 'SMTP connection error', 'details': str(e)}), 500
     else:
+        logging.error("Invalid MX records or no MX records found for %s", email)
         return jsonify({'error': 'Invalid MX records or no MX records found'}), 500
 
 @app.route('/api/v1/verify/', methods=['GET'])
 def search():
     addr = request.args.get('q')
     if not validators.email(addr):
+        logging.warning("Invalid email address provided: %s", addr)
         return jsonify({'Error': 'Invalid email address'}), 400
     data = verifyemail(addr)
     return data
