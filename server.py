@@ -17,8 +17,6 @@ PASSWORD = "liUFvsaye3l4+4QlU7"  # Replace with your Smartproxy password
 # Set up SOCKS5 proxy for outgoing connections
 socks.set_default_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT, True, USERNAME, PASSWORD)
 
-# Optionally, configure SSL if the new provider requires it
-ssl_context = ssl.create_default_context(cafile=SSL_CERT_PATH)
 
 # Initialize Flask app
 app = Flask(__name__)
