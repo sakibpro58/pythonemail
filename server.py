@@ -47,14 +47,17 @@ def check_ip():
 check_ip()
 
 def get_ipv4_mx_records(mx_records):
-    """Filter MX records to return only IPv4 addresses."""
+    """Filter MX records to return only valid IPv4 addresses."""
     ipv4_records = []
     for record in mx_records:
+        if not record or len(record) > 255 or '.' not in record:
+            logging.warning(f"Invalid MX record skipped: {record}")
+            continue
         try:
             ipv4_address = socket.gethostbyname(record)
             ipv4_records.append(ipv4_address)
         except socket.gaierror as e:
-            logging.warning(f"Skipping IPv6 or invalid record: {record}, Error: {e}")
+            logging.warning(f"Skipping invalid or unresolvable record: {record}, Error: {e}")
     return ipv4_records
 
 def verifyemail(email):
@@ -66,7 +69,7 @@ def verifyemail(email):
 
     if not ipv4_mx:
         logging.error("No valid IPv4 MX records found for %s", email)
-        return jsonify({'error': 'No valid IPv4 MX records found'}), 500
+        return jsonify({'error': 'No valid IPv4 MX records found after filtering'}), 500
 
     fake = findcatchall(email, ipv4_mx)
     fake = 'Yes' if fake > 0 else 'No'
