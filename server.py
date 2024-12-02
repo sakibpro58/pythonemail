@@ -1,8 +1,12 @@
+import os
+from libs.mx import getrecords
+from libs.email import checkemail, findcatchall
+from flask import Flask, request, jsonify
+import validators
 import socks
-import socket
 import smtplib
 import ssl
-from flask import Flask, request, jsonify
+import socket
 
 # Proxy Configuration - Directly set in the script
 PROXY_HOST = 'brd.superproxy.io'  # Proxy host
@@ -20,10 +24,23 @@ ssl_context = ssl.create_default_context()
 # Initialize Flask app
 app = Flask(__name__)
 
-def verifyemail(email):
-    # Assuming mx records are retrieved already
-    mx = ["smtp.example.com"]  # Replace with actual MX records
+# Function to test proxy connection (optional, for debugging)
+def test_proxy_connection():
+    try:
+        test_host = "httpbin.org"
+        test_port = 80
+        with socket.create_connection((test_host, test_port)) as s:
+            s.sendall(b"GET /ip HTTP/1.1\r\nHost: httpbin.org\r\n\r\n")
+            response = s.recv(1024).decode()
+            print("Proxy connection successful. Response:", response)
+            return True
+    except Exception as e:
+        print(f"Proxy connection failed: {e}")
+        return False
 
+# Verify email function
+def verifyemail(email):
+    mx = getrecords(email)
     print("MX Records:", mx)  # Debug: Log MX records
 
     if mx != 0 and len(mx) > 0:
@@ -53,11 +70,15 @@ def search():
     addr = request.args.get('q')
     if not addr:
         return jsonify({'Error': 'No email address provided'}), 400
-    if not addr.endswith('@example.com'):  # Simple email validation check
+
+    # Use validators module to validate email
+    if not validators.email(addr):
         return jsonify({'Error': 'Invalid email address'}), 400
 
     # Test proxy connection before verification
-    # Note: You can add your own test proxy connection method here
+    if not test_proxy_connection():
+        return jsonify({'error': 'Proxy connection failed'}), 500
+
     return verifyemail(addr)
 
 if __name__ == "__main__":
